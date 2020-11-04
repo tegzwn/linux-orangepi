@@ -138,6 +138,9 @@ struct rc_map {
 	enum rc_type		rc_type;
 	const char		*name;
 	spinlock_t		lock;
+#ifdef CONFIG_SUNXI_KEYMAPPING_SUPPORT
+	void			*mapping;
+#endif
 };
 
 /**

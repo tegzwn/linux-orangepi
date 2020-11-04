@@ -40,6 +40,7 @@ static int derive_key_aes(const u8 *master_key,
 	DECLARE_CRYPTO_WAIT(wait);
 	struct scatterlist src_sg, dst_sg;
 	struct crypto_skcipher *tfm = crypto_alloc_skcipher("ecb(aes)", 0, 0);
+	char *buf = NULL;
 
 	if (IS_ERR(tfm)) {
 		res = PTR_ERR(tfm);
@@ -58,8 +59,17 @@ static int derive_key_aes(const u8 *master_key,
 	res = crypto_skcipher_setkey(tfm, ctx->nonce, sizeof(ctx->nonce));
 	if (res < 0)
 		goto out;
+	/*the source buf address is not word align,so malloc to ss*/
+	buf = kmalloc(FS_MAX_KEY_SIZE, GFP_NOFS);
+	if (buf == NULL) {
+		pr_err("kmalloc fail\n");
+		res = -EINVAL;
+		goto out;
+	}
+	memcpy(buf, (void *)master_key, derived_keysize);
 
-	sg_init_one(&src_sg, master_key, derived_keysize);
+	sg_init_one(&src_sg, buf, derived_keysize);
+	/*sg_init_one(&src_sg, master_key, derived_keysize);*/
 	sg_init_one(&dst_sg, derived_key, derived_keysize);
 	skcipher_request_set_crypt(req, &src_sg, &dst_sg, derived_keysize,
 				   NULL);
@@ -67,6 +77,8 @@ static int derive_key_aes(const u8 *master_key,
 out:
 	skcipher_request_free(req);
 	crypto_free_skcipher(tfm);
+	if (buf != NULL)
+		kzfree(buf);
 	return res;
 }
 

@@ -25,7 +25,6 @@
 *.elf
 *.bin
 *.tar
-*.gz
 *.bz2
 *.lzma
 *.xz
@@ -116,5 +115,9 @@ all.config
 # Kdevelop4
 *.kdev4
 
-# fetched Android config fragments
-kernel/configs/android-*.cfg
+# Do not track output folder.
+/output
+
+# ignore gator md5 data
+drivers/gator/gator_src_md5.h
+

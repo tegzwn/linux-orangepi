@@ -87,7 +87,6 @@ void irqtime_account_irq(struct task_struct *curr)
 #ifdef CONFIG_SCHED_WALT
 	else
 		account = false;
-
 	if (account)
 		walt_account_irqtime(cpu, curr, delta, wallclock);
 #endif

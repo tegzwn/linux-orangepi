@@ -395,9 +395,15 @@ static inline struct kmem_cache *slab_pre_alloc_hook(struct kmem_cache *s,
 	if (should_failslab(s, flags))
 		return NULL;
 
+#ifdef CONFIG_MEMCG
+	if (!memcg_kmem_enabled() &&
+	    ((flags & __GFP_ACCOUNT) || (s->flags & SLAB_ACCOUNT)))
+		return memcg_kmem_get_cache(s);
+#else
 	if (memcg_kmem_enabled() &&
 	    ((flags & __GFP_ACCOUNT) || (s->flags & SLAB_ACCOUNT)))
 		return memcg_kmem_get_cache(s);
+#endif
 
 	return s;
 }

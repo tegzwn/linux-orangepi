@@ -30,7 +30,7 @@
 
 static gfp_t high_order_gfp_flags = (GFP_HIGHUSER | __GFP_ZERO | __GFP_NOWARN |
 				     __GFP_NORETRY) & ~__GFP_RECLAIM;
-static gfp_t low_order_gfp_flags  = (GFP_HIGHUSER | __GFP_ZERO);
+static gfp_t low_order_gfp_flags  = (GFP_HIGHUSER | __GFP_ZERO | __GFP_NOWARN);
 static const unsigned int orders[] = {8, 4, 0};
 
 static int order_to_index(unsigned int order)
@@ -314,6 +314,8 @@ static int ion_system_heap_create_pools(struct ion_page_pool **pools,
 
 		if (orders[i] > 4)
 			gfp_flags = high_order_gfp_flags;
+		else
+			gfp_flags = low_order_gfp_flags;
 
 		pool = ion_page_pool_create(gfp_flags, orders[i], cached);
 		if (!pool)

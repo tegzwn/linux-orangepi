@@ -32,6 +32,7 @@
 #include <linux/of_gpio.h>
 #include <linux/of_irq.h>
 #include <linux/spinlock.h>
+#include <linux/sunxi-gpio.h>
 
 struct gpio_button_data {
 	const struct gpio_keys_button *button;
@@ -664,11 +665,12 @@ gpio_keys_get_devtree_pdata(struct device *dev)
 
 	i = 0;
 	for_each_available_child_of_node(node, pp) {
-		enum of_gpio_flags flags;
+		struct gpio_config flags;
 
 		button = &pdata->buttons[i++];
 
-		button->gpio = of_get_gpio_flags(pp, 0, &flags);
+		button->gpio = of_get_gpio_flags(pp, 0,
+				(enum of_gpio_flags *)&flags);
 		if (button->gpio < 0) {
 			error = button->gpio;
 			if (error != -ENOENT) {
@@ -679,7 +681,7 @@ gpio_keys_get_devtree_pdata(struct device *dev)
 				return ERR_PTR(error);
 			}
 		} else {
-			button->active_low = flags & OF_GPIO_ACTIVE_LOW;
+			button->active_low = flags.data & OF_GPIO_ACTIVE_LOW;
 		}
 
 		button->irq = irq_of_parse_and_map(pp, 0);

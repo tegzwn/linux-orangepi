@@ -33,7 +33,6 @@
 #include <asm/mce.h>
 #include <asm/vm86.h>
 #include <asm/switch_to.h>
-#include <asm/spec-ctrl.h>
 
 #include "process.h"
 

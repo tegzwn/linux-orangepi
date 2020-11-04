@@ -39,6 +39,8 @@
 #include <linux/init_task.h>
 #include <asm/uaccess.h>
 
+#include <linux/fivm.h>
+
 #include "internal.h"
 #include "mount.h"
 
@@ -51,8 +53,8 @@
  * The new code replaces the old recursive symlink resolution with
  * an iterative one (in case of non-nested symlink chains).  It does
  * this with calls to <fs>_follow_link().
- * As a side effect, dir_namei(), _namei() and follow_link() are now 
- * replaced with a single function lookup_dentry() that can handle all 
+ * As a side effect, dir_namei(), _namei() and follow_link() are now
+ * replaced with a single function lookup_dentry() that can handle all
  * the special cases of the former code.
  *
  * With the new dcache, the pathname is stored at each inode, at least as
@@ -3465,6 +3467,11 @@ opened:
 	error = open_check_o_direct(file);
 	if (!error)
 		error = ima_file_check(file, op->acc_mode, *opened);
+#ifdef CONFIG_FILE_INTEGRITY
+	error = fivm_open_verify(file, nd->name->name, op->acc_mode);
+	if (error)
+		goto out;
+#endif
 	if (!error && will_truncate)
 		error = handle_truncate(file);
 out:

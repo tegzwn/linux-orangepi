@@ -18,8 +18,8 @@
 #include <linux/workqueue.h>
 #include <linux/kmod.h>
 #include <trace/events/power.h>
-#include <linux/wakeup_reason.h>
 #include <linux/cpuset.h>
+#include <linux/wakeup_reason.h>
 
 /*
  * Timeout for stopping processes

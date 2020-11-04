@@ -717,6 +717,9 @@ static size_t nilfs_lookup_dirty_data_buffers(struct inode *inode,
 		struct buffer_head *bh, *head;
 		struct page *page = pvec.pages[i];
 
+		if (unlikely(page->index > last))
+			break;
+
 		lock_page(page);
 		if (!page_has_buffers(page))
 			create_empty_buffers(page, i_blocksize(inode), 0);

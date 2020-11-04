@@ -3841,6 +3841,11 @@ retry:
 			if (!PagePrivate(page))
 				continue;
 
+			if (!wbc->range_cyclic && page->index > end) {
+				done = 1;
+				break;
+			}
+
 			spin_lock(&mapping->private_lock);
 			if (!PagePrivate(page)) {
 				spin_unlock(&mapping->private_lock);
@@ -3999,6 +4004,12 @@ retry:
 			}
 
 			if (unlikely(page->mapping != mapping)) {
+				unlock_page(page);
+				continue;
+			}
+
+			if (!wbc->range_cyclic && page->index > end) {
+				done = 1;
 				unlock_page(page);
 				continue;
 			}

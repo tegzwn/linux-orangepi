@@ -680,6 +680,18 @@ int snd_soc_suspend(struct device *dev)
 			cpu_dai->driver->suspend(cpu_dai);
 	}
 
+#ifdef CONFIG_SND_SUNXI_MAD
+	list_for_each_entry(rtd, &card->rtd_list, list) {
+		struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+
+		/*if mad_bind=1, then ignore_suspend is true*/
+		if (rtd->dai_link->ignore_suspend) {
+			if (cpu_dai->driver->suspend && !cpu_dai->driver->bus_control)
+				cpu_dai->driver->suspend(cpu_dai);
+		}
+	}
+#endif
+
 	/* close any waiting streams */
 	list_for_each_entry(rtd, &card->rtd_list, list)
 		flush_delayed_work(&rtd->delayed_work);
@@ -840,6 +852,18 @@ static void soc_resume_deferred(struct work_struct *work)
 		if (cpu_dai->driver->resume && !cpu_dai->driver->bus_control)
 			cpu_dai->driver->resume(cpu_dai);
 	}
+
+#ifdef CONFIG_SND_SUNXI_MAD
+	list_for_each_entry(rtd, &card->rtd_list, list) {
+		struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+
+		/*if mad_bind=1, then ignore_suspend is true*/
+		if (rtd->dai_link->ignore_suspend) {
+			if (cpu_dai->driver->resume && !cpu_dai->driver->bus_control)
+				cpu_dai->driver->resume(cpu_dai);
+		}
+	}
+#endif
 
 	if (card->resume_post)
 		card->resume_post(card);

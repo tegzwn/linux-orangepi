@@ -805,8 +805,8 @@ static int skcipher_sendmsg_nokey(struct socket *sock, struct msghdr *msg,
 	int err;
 
 	err = skcipher_check_key(sock);
-	if (err)
-		return err;
+	/*if (err)
+		return err;*/ /*ce2.0 dh/rsa/ecc have no single key to set*/
 
 	return skcipher_sendmsg(sock, msg, size);
 }
@@ -817,8 +817,8 @@ static ssize_t skcipher_sendpage_nokey(struct socket *sock, struct page *page,
 	int err;
 
 	err = skcipher_check_key(sock);
-	if (err)
-		return err;
+	/*if (err)
+		return err;*/ /*ce2.0 dh/rsa/ecc have no single key to set*/
 
 	return skcipher_sendpage(sock, page, offset, size, flags);
 }
@@ -829,8 +829,8 @@ static int skcipher_recvmsg_nokey(struct socket *sock, struct msghdr *msg,
 	int err;
 
 	err = skcipher_check_key(sock);
-	if (err)
-		return err;
+	/*if (err)
+		return err;*/ /*ce2.0 dh/rsa/ecc have no single key to set*/
 
 	return skcipher_recvmsg(sock, msg, ignored, flags);
 }

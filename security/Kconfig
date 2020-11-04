@@ -177,6 +177,13 @@ config HARDENED_USERCOPY_PAGESPAN
 	  been removed. This config is intended to be used only while
 	  trying to find such users.
 
+config FILE_INTEGRITY
+	depends on SECURITYFS
+	tristate "Enable System File Verify Module"
+	default n
+	help
+		Sunxi file integrity verify module for android system
+
 source security/selinux/Kconfig
 source security/smack/Kconfig
 source security/tomoyo/Kconfig

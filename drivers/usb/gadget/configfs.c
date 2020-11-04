@@ -1,3 +1,10 @@
+/*
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ */
+
 #include <linux/configfs.h>
 #include <linux/module.h>
 #include <linux/slab.h>
@@ -32,6 +39,90 @@ struct device *create_function_device(char *name)
 		return ERR_PTR(-EINVAL);
 }
 EXPORT_SYMBOL_GPL(create_function_device);
+#endif
+
+#if IS_ENABLED(CONFIG_USB_SUNXI_UDC0)
+#include <linux/of_device.h>
+#define KEY_USB_SERIAL_UNIQUE			"usb_serial_unique"
+#define KEY_USB_SERIAL_NUMBER			"usb_serial_number"
+#define KEY_CMDLINE_SERIAL			"androidboot.serialno"
+
+u32 serial_unique;
+char g_usb_serial_number[64];
+
+static int get_para_from_cmdline(const char *cmdline,
+		const char *name, char *value, int maxsize)
+{
+	char *p = (char *)cmdline;
+	char *value_p = value;
+	int size = 0;
+
+	if (!cmdline || !name || !value)
+		return -1;
+
+	for (; *p != 0;) {
+		if (*p++ == ' ') {
+			if (strncmp(p, name, strlen(name)) == 0) {
+				p += strlen(name);
+				if (*p++ != '=')
+					continue;
+				while ((*p != 0) && (*p != ' ')
+						&& (++size < maxsize))
+					*value_p++ = *p++;
+				*value_p = '\0';
+				return value_p - value;
+			}
+		}
+	}
+
+	return 0;
+}
+
+static int get_android_usb_config(void)
+{
+	struct device_node *usbc0_np = NULL;
+
+	const char *usb_serial_number;
+	int ret = -1;
+
+	usbc0_np = of_find_node_by_type(NULL, "usbc0");
+
+	/* get serial unique */
+	ret = of_property_read_u32(usbc0_np, KEY_USB_SERIAL_UNIQUE,
+				&serial_unique);
+	if (ret)
+		pr_info("get serial_unique failed\n");
+
+	/* get usb serial number from boot command line*/
+	ret = get_para_from_cmdline(saved_command_line,
+				KEY_CMDLINE_SERIAL,
+				g_usb_serial_number,
+				sizeof(g_usb_serial_number));
+
+	if (serial_unique == 1 && ret > 0) {
+		pr_info("get usb_serial_number success from boot command line");
+	} else {
+		/* get serial number */
+		ret = of_property_read_string(usbc0_np, KEY_USB_SERIAL_NUMBER,
+					&usb_serial_number);
+		if (ret) {
+			pr_info("get usb_serial_number failed\n");
+			strncpy(g_usb_serial_number,
+				"20080411",
+				ARRAY_SIZE(g_usb_serial_number));
+		} else {
+			if (usb_serial_number != NULL) {
+				strncpy(g_usb_serial_number,
+					usb_serial_number,
+					ARRAY_SIZE(g_usb_serial_number));
+				pr_info("usb_serial_number:%s\n",
+						usb_serial_number);
+			}
+		}
+	}
+
+	return 0;
+}
 #endif
 
 int check_user_usb_string(const char *name,
@@ -1330,6 +1421,17 @@ static int configfs_composite_bind(struct usb_gadget *gadget,
 			gs->strings[USB_GADGET_MANUFACTURER_IDX].s =
 				gs->manufacturer;
 			gs->strings[USB_GADGET_PRODUCT_IDX].s = gs->product;
+#if IS_ENABLED(CONFIG_USB_SUNXI_UDC0)
+			if (!gs->serialnumber) {
+				char *p_serial = kzalloc(sizeof(g_usb_serial_number), GFP_KERNEL);
+
+				if (!p_serial)
+					return -ENOMEM;
+				strncpy(p_serial, g_usb_serial_number,
+						sizeof(g_usb_serial_number) - 1);
+				gs->serialnumber = p_serial;
+			}
+#endif
 			gs->strings[USB_GADGET_SERIAL_IDX].s = gs->serialnumber;
 			i++;
 		}
@@ -1680,7 +1782,7 @@ static const struct usb_gadget_driver configfs_driver_template = {
 	.max_speed	= USB_SPEED_SUPER_PLUS,
 	.driver = {
 		.owner          = THIS_MODULE,
-		.name		= "configfs-gadget",
+		.name		    = "configfs-gadget",
 	},
 	.match_existing_only = 1,
 };
@@ -1869,6 +1971,10 @@ EXPORT_SYMBOL_GPL(unregister_gadget_item);
 static int __init gadget_cfs_init(void)
 {
 	int ret;
+
+#if IS_ENABLED(CONFIG_USB_SUNXI_UDC0)
+		get_android_usb_config();
+#endif
 
 	config_group_init(&gadget_subsys.su_group);
 

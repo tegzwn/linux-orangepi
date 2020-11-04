@@ -1147,7 +1147,6 @@ static long trusted_read(const struct key *key, char __user *buffer,
 	p = dereference_key_locked(key);
 	if (!p)
 		return -EINVAL;
-
 	if (buffer && buflen >= 2 * p->blob_len) {
 		ascii_buf = kmalloc(2 * p->blob_len, GFP_KERNEL);
 		if (!ascii_buf)

@@ -99,6 +99,12 @@ EXPORT_SYMBOL_GPL(ehci_cf_port_reset_rwsem);
 #define HUB_DEBOUNCE_STEP	  25
 #define HUB_DEBOUNCE_STABLE	 100
 
+/* To indicate whether we are in super standby. */
+#if defined(CONFIG_PM) && IS_ENABLED(CONFIG_USB_SUNXI_HCI)
+atomic_t g_sunxi_usb_super_standby = ATOMIC_INIT(0);
+EXPORT_SYMBOL_GPL(g_sunxi_usb_super_standby);
+#endif
+
 static void hub_release(struct kref *kref);
 static int usb_reset_and_verify_device(struct usb_device *udev);
 static int hub_port_disable(struct usb_hub *hub, int port1, int set_state);
@@ -3505,7 +3511,15 @@ int usb_port_resume(struct usb_device *udev, pm_message_t msg)
 		msleep(10);
 	}
 
+	/* FIXME: wait_for_connected() takes about 3 seconds
+	 * during resume in the worst condition. So we try to skip
+	 * waiting when we are in super standby.
+	 */
+#if IS_ENABLED(CONFIG_USB_SUNXI_HCI)
+	if (udev->persist_enabled && !atomic_read(&g_sunxi_usb_super_standby))
+#else
 	if (udev->persist_enabled)
+#endif
 		status = wait_for_connected(udev, hub, &port1, &portchange,
 				&portstatus);
 
@@ -4403,8 +4417,7 @@ static void hub_set_initial_usb2_lpm_policy(struct usb_device *udev)
 	if (hub)
 		connect_type = hub->ports[udev->portnum - 1]->connect_type;
 
-	if ((udev->bos->ext_cap->bmAttributes & cpu_to_le32(USB_BESL_SUPPORT)) ||
-			connect_type == USB_PORT_CONNECT_TYPE_HARD_WIRED) {
+	if (connect_type == USB_PORT_CONNECT_TYPE_HARD_WIRED) {
 		udev->usb2_hw_lpm_allowed = 1;
 		usb_enable_usb2_hardware_lpm(udev);
 	}

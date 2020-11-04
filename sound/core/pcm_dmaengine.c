@@ -27,6 +27,7 @@
 #include <sound/soc.h>
 
 #include <sound/dmaengine_pcm.h>
+#include "../soc/sunxi/sunxi-pcm.h"
 
 struct dmaengine_pcm_runtime_data {
 	struct dma_chan *dma_chan;
@@ -63,21 +64,25 @@ int snd_hwparams_to_dma_slave_config(const struct snd_pcm_substream *substream,
 	struct dma_slave_config *slave_config)
 {
 	enum dma_slave_buswidth buswidth;
-	int bits;
-
-	bits = params_physical_width(params);
-	if (bits < 8 || bits > 64)
-		return -EINVAL;
-	else if (bits == 8)
+	switch (params_format(params)) {
+	case SNDRV_PCM_FORMAT_S8:
 		buswidth = DMA_SLAVE_BUSWIDTH_1_BYTE;
-	else if (bits == 16)
+		break;
+	case SNDRV_PCM_FORMAT_S16_LE:
 		buswidth = DMA_SLAVE_BUSWIDTH_2_BYTES;
-	else if (bits == 24)
-		buswidth = DMA_SLAVE_BUSWIDTH_3_BYTES;
-	else if (bits <= 32)
+		break;
+	case SNDRV_PCM_FORMAT_S18_3LE:
+	case SNDRV_PCM_FORMAT_S20_3LE:
+	case SNDRV_PCM_FORMAT_S24_LE:
+	case SNDRV_PCM_FORMAT_S32_LE:
 		buswidth = DMA_SLAVE_BUSWIDTH_4_BYTES;
-	else
-		buswidth = DMA_SLAVE_BUSWIDTH_8_BYTES;
+		break;
+	default:
+		return -EINVAL;
+	}
+#ifdef CONFIG_SND_SUNXI_MAD
+	buswidth = DMA_SLAVE_BUSWIDTH_4_BYTES;
+#endif
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		slave_config->direction = DMA_MEM_TO_DEV;
@@ -141,10 +146,18 @@ static void dmaengine_pcm_dma_complete(void *arg)
 {
 	struct snd_pcm_substream *substream = arg;
 	struct dmaengine_pcm_runtime_data *prtd = substream_to_prtd(substream);
+	unsigned long flags;
+
+	snd_pcm_stream_lock_irqsave(substream, flags);
+	if (!substream->runtime) {
+		snd_pcm_stream_unlock_irqrestore(substream, flags);
+		return;
+	}
 
 	prtd->pos += snd_pcm_lib_period_bytes(substream);
 	if (prtd->pos >= snd_pcm_lib_buffer_bytes(substream))
 		prtd->pos = 0;
+	snd_pcm_stream_unlock_irqrestore(substream, flags);
 
 	snd_pcm_period_elapsed(substream);
 }
@@ -163,10 +176,22 @@ static int dmaengine_pcm_prepare_and_submit(struct snd_pcm_substream *substream)
 		flags |= DMA_PREP_INTERRUPT;
 
 	prtd->pos = 0;
-	desc = dmaengine_prep_dma_cyclic(chan,
-		substream->runtime->dma_addr,
-		snd_pcm_lib_buffer_bytes(substream),
-		snd_pcm_lib_period_bytes(substream), direction, flags);
+#ifdef CONFIG_SND_SUNXI_SOC_AHUB
+	if (sunxi_ahub_get_rawflag() > 1) {
+#else
+	if (!strcmp(substream->pcm->card->id, "sndhdmiraw")) {
+#endif
+		desc = dmaengine_prep_dma_cyclic(chan,
+			substream->runtime->dma_addr,
+			2 * snd_pcm_lib_buffer_bytes(substream),
+			2 * snd_pcm_lib_period_bytes(substream),
+			direction, flags);
+	} else {
+		desc = dmaengine_prep_dma_cyclic(chan,
+			substream->runtime->dma_addr,
+			snd_pcm_lib_buffer_bytes(substream),
+			snd_pcm_lib_period_bytes(substream), direction, flags);
+	}
 
 	if (!desc)
 		return -ENOMEM;

@@ -31,6 +31,7 @@ config ARM
 	select GENERIC_SMP_IDLE_THREAD
 	select GENERIC_STRNCPY_FROM_USER
 	select GENERIC_STRNLEN_USER
+	select ARCH_HAS_SG_CHAIN
 	select HANDLE_DOMAIN_IRQ
 	select HARDIRQS_SW_RESEND
 	select HAVE_ARCH_AUDITSYSCALL if (AEABI && !OABI_COMPAT)
@@ -353,6 +354,17 @@ config ARM_SINGLE_ARMV7M
 	select NO_IOPORT_MAP
 	select SPARSE_IRQ
 	select USE_OF
+
+config ARCH_SUNXI
+	bool "Allwinner Ltd. SUNXI family"
+	select NEED_MACH_IO_H
+	select NEED_MACH_MEMORY_H
+	select ARCH_HAVE_CUSTOM_GPIO_H
+	select ARCH_HAS_CPUFREQ
+	select ARM_HAS_SG_CHAIN
+	select SUN4I_TIMER
+	help
+	  This enables support for systems based on sunxi soc.
 
 config ARCH_GEMINI
 	bool "Cortina Systems Gemini"
@@ -1638,6 +1650,42 @@ config OABI_COMPAT
 	  to execute a legacy ABI binary then the result will be
 	  UNPREDICTABLE (in fact it can be predicted that it won't work
 	  at all). If in doubt say N.
+
+
+config SCHED_DCMP
+	bool "Dual Cluster symmetric support"
+	depends on ARCH_SUN8IW6 || ARCH_SUN8IW9 || ARCH_SUN8IW17
+	default n
+	help
+	  Allows the Dual cluster symmetric
+
+config SCHED_HMP_DCMP
+	bool "(EXPERIMENTAL) Heterogenous multiprocessor scheduling for DCMP"
+	depends on SCHED_HMP && SCHED_DCMP
+	help
+	  Experimental scheduler optimizations for heterogeneous platforms
+	  for DCMP
+
+config SCHED_SMP_DCMP
+	bool "(EXPERIMENTAL) SMP scheduling for DCMP"
+	depends on !SCHED_HMP && SCHED_DCMP
+	help
+	  Experimental SMP scheduling for DCMP
+
+config CLUSTER0_CPU_MASK
+	string "Cluster0 mask for Dual Cluster"
+	depends on SCHED_SMP_DCMP
+	help
+	  Leave empty to use device tree information.
+	  Specify the cpuids of the fast CPUs in the system as a list string,
+	  e.g. cpuid 0+1 should be specified as 0-1.
+config CLUSTER1_CPU_MASK
+	string "Cluster1 mask for Dual Cluster"
+	depends on SCHED_SMP_DCMP
+	help
+	  Leave empty to use device tree information.
+	  Specify the cpuids of the fast CPUs in the system as a list string,
+	  e.g. cpuid 0+1 should be specified as 0-1.
 
 config ARCH_HAS_HOLES_MEMORYMODEL
 	bool

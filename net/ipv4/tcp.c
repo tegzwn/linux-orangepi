@@ -1140,8 +1140,7 @@ int tcp_sendmsg(struct sock *sk, struct msghdr *msg, size_t size)
 	lock_sock(sk);
 
 	flags = msg->msg_flags;
-	if (unlikely(flags & MSG_FASTOPEN || inet_sk(sk)->defer_connect) &&
-	    !tp->repair) {
+	if (unlikely(flags & MSG_FASTOPEN || inet_sk(sk)->defer_connect)) {
 		err = tcp_sendmsg_fastopen(sk, msg, &copied_syn, size);
 		if (err == -EINPROGRESS && copied_syn > 0)
 			goto out;
@@ -2326,7 +2325,6 @@ int tcp_disconnect(struct sock *sk, int flags)
 		icsk->icsk_ca_ops->release(sk);
 	memset(icsk->icsk_ca_priv, 0, sizeof(icsk->icsk_ca_priv));
 	tcp_set_ca_state(sk, TCP_CA_Open);
-	tp->is_sack_reneg = 0;
 	tcp_clear_retrans(tp);
 	tp->total_retrans = 0;
 	inet_csk_delack_init(sk);

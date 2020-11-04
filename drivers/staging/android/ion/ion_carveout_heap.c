@@ -105,12 +105,27 @@ static void ion_carveout_heap_free(struct ion_buffer *buffer)
 	ion_heap_buffer_zero(buffer);
 
 	if (ion_buffer_cached(buffer))
-		dma_sync_sg_for_device(NULL, table->sgl, table->nents,
+		dma_sync_sg_for_device(get_ion_dev(), table->sgl, table->nents,
 				       DMA_BIDIRECTIONAL);
 
 	ion_carveout_free(heap, paddr, buffer->size);
 	sg_free_table(table);
 	kfree(table);
+}
+
+
+static int ion_carveout_heap_phys(struct ion_heap *heap,
+				      struct ion_buffer *buffer,
+				      ion_phys_addr_t *addr, size_t *len)
+{
+	struct sg_table *table = buffer->sg_table;
+	struct page *page = sg_page(table->sgl);
+	ion_phys_addr_t paddr = PFN_PHYS(page_to_pfn(page));
+
+	*addr = paddr;
+	*len = buffer->size;
+
+	return 0;
 }
 
 static struct ion_heap_ops carveout_heap_ops = {
@@ -119,6 +134,7 @@ static struct ion_heap_ops carveout_heap_ops = {
 	.map_user = ion_heap_map_user,
 	.map_kernel = ion_heap_map_kernel,
 	.unmap_kernel = ion_heap_unmap_kernel,
+	.phys = ion_carveout_heap_phys,
 };
 
 struct ion_heap *ion_carveout_heap_create(struct ion_platform_heap *heap_data)

@@ -110,9 +110,6 @@ static bool bad_spectre_microcode(struct cpuinfo_x86 *c)
 	if (cpu_has(c, X86_FEATURE_HYPERVISOR))
 		return false;
 
-	if (c->x86 != 6)
-		return false;
-
 	for (i = 0; i < ARRAY_SIZE(spectre_bad_microcodes); i++) {
 		if (c->x86_model == spectre_bad_microcodes[i].model &&
 		    c->x86_stepping == spectre_bad_microcodes[i].stepping)
@@ -141,20 +138,17 @@ static void early_init_intel(struct cpuinfo_x86 *c)
 	if (c->x86 >= 6 && !cpu_has(c, X86_FEATURE_IA64))
 		c->microcode = intel_get_microcode_revision();
 
-	/* Now if any of them are set, check the blacklist and clear the lot */
 	if ((cpu_has(c, X86_FEATURE_SPEC_CTRL) ||
-	     cpu_has(c, X86_FEATURE_INTEL_STIBP) ||
-	     cpu_has(c, X86_FEATURE_IBRS) || cpu_has(c, X86_FEATURE_IBPB) ||
-	     cpu_has(c, X86_FEATURE_STIBP)) && bad_spectre_microcode(c)) {
-		pr_warn("Intel Spectre v2 broken microcode detected; disabling Speculation Control\n");
-		setup_clear_cpu_cap(X86_FEATURE_IBRS);
-		setup_clear_cpu_cap(X86_FEATURE_IBPB);
-		setup_clear_cpu_cap(X86_FEATURE_STIBP);
-		setup_clear_cpu_cap(X86_FEATURE_SPEC_CTRL);
-		setup_clear_cpu_cap(X86_FEATURE_MSR_SPEC_CTRL);
-		setup_clear_cpu_cap(X86_FEATURE_INTEL_STIBP);
-		setup_clear_cpu_cap(X86_FEATURE_SSBD);
-		setup_clear_cpu_cap(X86_FEATURE_SPEC_CTRL_SSBD);
+	     cpu_has(c, X86_FEATURE_STIBP) ||
+	     cpu_has(c, X86_FEATURE_AMD_SPEC_CTRL) ||
+	     cpu_has(c, X86_FEATURE_AMD_PRED_CMD) ||
+	     cpu_has(c, X86_FEATURE_AMD_STIBP)) && bad_spectre_microcode(c)) {
+		pr_warn("Intel Spectre v2 broken microcode detected; disabling SPEC_CTRL\n");
+		clear_cpu_cap(c, X86_FEATURE_SPEC_CTRL);
+		clear_cpu_cap(c, X86_FEATURE_STIBP);
+		clear_cpu_cap(c, X86_FEATURE_AMD_SPEC_CTRL);
+		clear_cpu_cap(c, X86_FEATURE_AMD_PRED_CMD);
+		clear_cpu_cap(c, X86_FEATURE_AMD_STIBP);
 	}
 
 	/*

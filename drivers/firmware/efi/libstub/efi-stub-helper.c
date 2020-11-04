@@ -362,10 +362,6 @@ efi_status_t efi_parse_options(char const *cmdline)
 {
 	char *str;
 
-	str = strstr(cmdline, "nokaslr");
-	if (str == cmdline || (str && str > cmdline && *(str - 1) == ' '))
-		__nokaslr = 1;
-
 	/*
 	 * If no EFI parameters were specified on the cmdline we've got
 	 * nothing to do.

@@ -1176,6 +1176,7 @@ void mmc_set_clock(struct mmc_host *host, unsigned int hz)
 	host->ios.clock = hz;
 	mmc_set_ios(host);
 }
+EXPORT_SYMBOL_GPL(mmc_set_clock);
 
 int mmc_execute_tuning(struct mmc_card *card)
 {
@@ -1222,6 +1223,7 @@ void mmc_set_bus_width(struct mmc_host *host, unsigned int width)
 	host->ios.bus_width = width;
 	mmc_set_ios(host);
 }
+EXPORT_SYMBOL_GPL(mmc_set_bus_width);
 
 /*
  * Set initial state after a power cycle or a hw_reset.
@@ -1497,12 +1499,13 @@ int mmc_regulator_set_ocr(struct mmc_host *mmc,
 			unsigned short vdd_bit)
 {
 	int			result = 0;
-	int			min_uV, max_uV;
+	/*int			min_uV, max_uV;*/
 
 	if (vdd_bit) {
-		mmc_ocrbitnum_to_vdd(vdd_bit, &min_uV, &max_uV);
+		/*sunxi platform avoid set vcc voltage*/
+		/*mmc_ocrbitnum_to_vdd(vdd_bit, &min_uV, &max_uV);
 
-		result = regulator_set_voltage(supply, min_uV, max_uV);
+		result = regulator_set_voltage(supply, min_uV, max_uV);*/
 		if (result == 0 && !mmc->regulator_enabled) {
 			result = regulator_enable(supply);
 			if (!result)
@@ -1780,6 +1783,7 @@ void mmc_set_timing(struct mmc_host *host, unsigned int timing)
 	host->ios.timing = timing;
 	mmc_set_ios(host);
 }
+EXPORT_SYMBOL_GPL(mmc_set_timing);
 
 /*
  * Select appropriate driver type for host.
@@ -2649,10 +2653,13 @@ int mmc_hw_reset(struct mmc_host *host)
 	ret = host->bus_ops->reset(host);
 	mmc_bus_put(host);
 
-	if (ret)
+	if (ret) {
 		pr_warn("%s: tried to reset card, got error %d\n",
 			mmc_hostname(host), ret);
-
+		pr_warn("%s: tried to re detect card\n",
+			mmc_hostname(host));
+		_mmc_detect_change(host, 0, false);
+	}
 	return ret;
 }
 EXPORT_SYMBOL(mmc_hw_reset);
@@ -2707,6 +2714,9 @@ static int mmc_rescan_try_freq(struct mmc_host *host, unsigned freq)
 int _mmc_detect_card_removed(struct mmc_host *host)
 {
 	int ret;
+
+	if (host->caps & MMC_CAP_NONREMOVABLE)
+		return 0;
 
 	if (!host->card || mmc_card_removed(host->card))
 		return 1;
@@ -2952,7 +2962,11 @@ EXPORT_SYMBOL(mmc_power_restore_host);
  */
 int mmc_flush_cache(struct mmc_card *card)
 {
+	struct mmc_host *host = card->host;
 	int err = 0;
+
+	if (!(host->caps2 & MMC_CAP2_CACHE_CTRL))
+		return err;
 
 	if (mmc_card_mmc(card) &&
 			(card->ext_csd.cache_size > 0) &&

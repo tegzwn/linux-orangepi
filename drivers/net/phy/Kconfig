@@ -150,6 +150,10 @@ config MDIO_XGENE
 
 comment "MII PHY device drivers"
 
+config SUNXI_EPHY
+	tristate "Drivers for Allwinnertech EPHY"
+	depends on MFD_ACX00
+
 config AMD_PHY
 	tristate "AMD PHYs"
 	---help---

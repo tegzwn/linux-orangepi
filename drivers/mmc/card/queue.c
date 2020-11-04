@@ -482,7 +482,11 @@ static unsigned int mmc_queue_packed_map_sg(struct mmc_queue *mq,
 	}
 
 	list_for_each_entry(req, &packed->list, queuelist) {
+#if defined(CONFIG_DM_CRYPT) && defined(CONFIG_SUNXI_EMCE)
+		sg_len += sunxi_blk_rq_map_sg(mq->queue, req, __sg);
+#else
 		sg_len += blk_rq_map_sg(mq->queue, req, __sg);
+#endif
 		__sg = sg + (sg_len - 1);
 		sg_unmark_end(__sg++);
 	}
@@ -508,7 +512,11 @@ unsigned int mmc_queue_map_sg(struct mmc_queue *mq, struct mmc_queue_req *mqrq)
 			return mmc_queue_packed_map_sg(mq, mqrq->packed,
 						       mqrq->sg, cmd_type);
 		else
+#if defined(CONFIG_DM_CRYPT) && defined(CONFIG_SUNXI_EMCE)
+			return sunxi_blk_rq_map_sg(mq->queue, mqrq->req, mqrq->sg);
+#else
 			return blk_rq_map_sg(mq->queue, mqrq->req, mqrq->sg);
+#endif
 	}
 
 	BUG_ON(!mqrq->bounce_sg);
@@ -517,7 +525,53 @@ unsigned int mmc_queue_map_sg(struct mmc_queue *mq, struct mmc_queue_req *mqrq)
 		sg_len = mmc_queue_packed_map_sg(mq, mqrq->packed,
 						 mqrq->bounce_sg, cmd_type);
 	else
+#if defined(CONFIG_DM_CRYPT) && defined(CONFIG_SUNXI_EMCE)
+		sg_len = sunxi_blk_rq_map_sg(mq->queue, mqrq->req, mqrq->bounce_sg);
+#else
 		sg_len = blk_rq_map_sg(mq->queue, mqrq->req, mqrq->bounce_sg);
+#endif
+	mqrq->bounce_sg_len = sg_len;
+
+	buflen = 0;
+	for_each_sg(mqrq->bounce_sg, sg, sg_len, i)
+		buflen += sg->length;
+
+	sg_init_one(mqrq->sg, mqrq->bounce_buf, buflen);
+
+	return 1;
+}
+
+/*
+ * Prepare the sunxi sd sg list(s) to be handed of to the host driver
+ */
+unsigned int sd_mmc_queue_map_sg(struct mmc_queue *mq, struct mmc_queue_req *mqrq)
+{
+	unsigned int sg_len;
+	size_t buflen;
+	struct scatterlist *sg;
+	enum mmc_packed_type cmd_type;
+	int i;
+
+	cmd_type = mqrq->cmd_type;
+
+	if (!mqrq->bounce_buf) {
+		if (mmc_packed_cmd(cmd_type))
+			return mmc_queue_packed_map_sg(mq, mqrq->packed,
+						       mqrq->sg, cmd_type);
+		else {
+			return blk_rq_map_sg(mq->queue, mqrq->req, mqrq->sg);
+		}
+	}
+
+	BUG_ON(!mqrq->bounce_sg);
+
+	if (mmc_packed_cmd(cmd_type))
+		sg_len = mmc_queue_packed_map_sg(mq, mqrq->packed,
+						 mqrq->bounce_sg, cmd_type);
+	else {
+
+		sg_len = blk_rq_map_sg(mq->queue, mqrq->req, mqrq->bounce_sg);
+	}
 
 	mqrq->bounce_sg_len = sg_len;
 

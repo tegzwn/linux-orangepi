@@ -44,6 +44,19 @@ static int ion_parse_dt_heap_common(struct device_node *heap_node,
 	heap->name = compatible[i].name;
 	heap->align = compatible[i].align;
 
+	if (heap->id == ION_HEAP_TYPE_CARVEOUT) {
+		u32 base = 0, size = 0;
+
+		if (of_property_read_u32(heap_node, "heap-base", &base))
+			pr_err("You need config the carvout 'heap-base'\n");
+		heap->base = base;
+		if (of_property_read_u32(heap_node, "heap-size", &size))
+			pr_err("You need config the carvout 'heap-size'\n");
+		heap->size = size;
+		pr_info("%s: carveout: heap-base = %x, heap-size = %x\n",
+				__func__, base, size);
+	}
+
 	/* Some kind of callback function pointer? */
 
 	pr_info("%s: id %d type %d name %s align %lx\n", __func__,

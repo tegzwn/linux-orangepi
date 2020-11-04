@@ -21,6 +21,7 @@
 #include <linux/integrity.h>
 #include <linux/ima.h>
 #include <linux/evm.h>
+#include <linux/fivm.h>
 #include <linux/fsnotify.h>
 #include <linux/mman.h>
 #include <linux/mount.h>
@@ -835,7 +836,10 @@ int security_mmap_file(struct file *file, unsigned long prot,
 {
 	int ret;
 	ret = call_int_hook(mmap_file, 0, file, prot,
-					mmap_prot(file, prot), flags);
+	mmap_prot(file, prot), flags);
+	if (ret)
+		return ret;
+	ret = fivm_mmap_verify(file, prot);
 	if (ret)
 		return ret;
 	return ima_file_mmap(file, prot);

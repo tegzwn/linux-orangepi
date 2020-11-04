@@ -20,6 +20,7 @@
 #include <linux/tee_drv.h>
 #include <linux/types.h>
 #include "optee_msg.h"
+#include "../tee_types.h"
 
 #define OPTEE_MAX_ARG_SIZE	1024
 

@@ -215,6 +215,11 @@ struct mmc_pwrseq;
 struct mmc_supply {
 	struct regulator *vmmc;		/* Card power supply */
 	struct regulator *vqmmc;	/* Optional Vccq supply */
+	struct regulator *vdmmc;	/* Optional card detect pin supply */
+	struct regulator *vdmmc33sw;	/* SD card PMU control*/
+	struct regulator *vdmmc18sw;
+	struct regulator *vqmmc33sw;	/* SD card PMU control*/
+	struct regulator *vqmmc18sw;
 };
 
 struct mmc_host {
@@ -290,6 +295,7 @@ struct mmc_host {
 
 #define MMC_CAP2_BOOTPART_NOACC	(1 << 0)	/* Boot partition no access */
 #define MMC_CAP2_FULL_PWR_CYCLE	(1 << 2)	/* Can do full power cycle */
+#define MMC_CAP2_CACHE_CTRL	(1 << 1)	/* Allow cache control */
 #define MMC_CAP2_HS200_1_8V_SDR	(1 << 5)        /* can support */
 #define MMC_CAP2_HS200_1_2V_SDR	(1 << 6)        /* can support */
 #define MMC_CAP2_HS200		(MMC_CAP2_HS200_1_8V_SDR | \
@@ -313,6 +319,11 @@ struct mmc_host {
 #define MMC_CAP2_HS400_ES	(1 << 20)	/* Host supports enhanced strobe */
 #define MMC_CAP2_NO_SD		(1 << 21)	/* Do not send SD commands during initialization */
 #define MMC_CAP2_NO_MMC		(1 << 22)	/* Do not send (e)MMC commands during initialization */
+
+#define MMC_SUNXI_CAP3_DAT3_DET	(1 << 0)
+#define MMC_SUNXI_CAP3_CD_USED_24M	(1 << 1)
+	u32		sunxi_caps3;
+
 
 	mmc_pm_flag_t		pm_caps;	/* supported pm features */
 

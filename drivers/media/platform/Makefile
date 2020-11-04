@@ -66,3 +66,8 @@ ccflags-y += -I$(srctree)/drivers/media/i2c
 obj-$(CONFIG_VIDEO_MEDIATEK_VPU)	+= mtk-vpu/
 
 obj-$(CONFIG_VIDEO_MEDIATEK_VCODEC)	+= mtk-vcodec/
+
+obj-$(CONFIG_VIDEO_SUNXI_VFE)		+= sunxi-vfe/
+obj-$(CONFIG_VIDEO_SUNXI_VIN)		+= sunxi-vin/
+obj-$(CONFIG_VIDEO_SUNXI_TVD) += sunxi-tvd/
+obj-y	+= sunxi_car_reverse/

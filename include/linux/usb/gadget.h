@@ -111,6 +111,10 @@ struct usb_request {
 	void			*context;
 	struct list_head	list;
 
+#if IS_ENABLED(CONFIG_USB_SUNXI_UDC0)
+	int			dma_flag;
+#endif
+
 	int			status;
 	unsigned		actual;
 };
@@ -496,7 +500,11 @@ static inline int gadget_avoids_skb_reserve(struct usb_gadget *g)
  */
 static inline int gadget_is_dualspeed(struct usb_gadget *g)
 {
+#if IS_ENABLED(CONFIG_USB_SUNXI_UDC0)
+	return 1;
+#else
 	return g->max_speed >= USB_SPEED_HIGH;
+#endif
 }
 
 /**

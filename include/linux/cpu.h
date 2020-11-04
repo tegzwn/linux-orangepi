@@ -81,6 +81,10 @@ struct notifier_block;
 #define CPU_DEAD		0x0007 /* CPU (unsigned)v dead */
 #define CPU_POST_DEAD		0x0009 /* CPU (unsigned)v dead, cpu_hotplug
 					* lock is dropped */
+#define CPU_STARTING		0x000A /* CPU (unsigned)v soon running.
+					* Called on the new cpu, just before
+					* enabling interrupts. Must not sleep,
+					* must not fail */
 #define CPU_BROKEN		0x000B /* CPU (unsigned)v did not die properly,
 					* perhaps due to preemption. */
 
@@ -95,6 +99,8 @@ struct notifier_block;
 #define CPU_DOWN_PREPARE_FROZEN	(CPU_DOWN_PREPARE | CPU_TASKS_FROZEN)
 #define CPU_DOWN_FAILED_FROZEN	(CPU_DOWN_FAILED | CPU_TASKS_FROZEN)
 #define CPU_DEAD_FROZEN		(CPU_DEAD | CPU_TASKS_FROZEN)
+#define CPU_DYING_FROZEN	(CPU_DYING | CPU_TASKS_FROZEN)
+#define CPU_STARTING_FROZEN	(CPU_STARTING | CPU_TASKS_FROZEN)
 
 #ifdef CONFIG_SMP
 extern bool cpuhp_tasks_frozen;

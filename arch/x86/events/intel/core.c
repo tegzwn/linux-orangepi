@@ -3107,7 +3107,7 @@ ssize_t intel_event_sysfs_show(char *page, u64 config)
 	return x86_event_sysfs_show(page, config, event);
 }
 
-static struct intel_shared_regs *allocate_shared_regs(int cpu)
+struct intel_shared_regs *allocate_shared_regs(int cpu)
 {
 	struct intel_shared_regs *regs;
 	int i;
@@ -3139,9 +3139,10 @@ static struct intel_excl_cntrs *allocate_excl_cntrs(int cpu)
 	return c;
 }
 
-
-int intel_cpuc_prepare(struct cpu_hw_events *cpuc, int cpu)
+static int intel_pmu_cpu_prepare(int cpu)
 {
+	struct cpu_hw_events *cpuc = &per_cpu(cpu_hw_events, cpu);
+
 	if (x86_pmu.extra_regs || x86_pmu.lbr_sel_map) {
 		cpuc->shared_regs = allocate_shared_regs(cpu);
 		if (!cpuc->shared_regs)
@@ -3151,7 +3152,7 @@ int intel_cpuc_prepare(struct cpu_hw_events *cpuc, int cpu)
 	if (x86_pmu.flags & PMU_FL_EXCL_CNTRS) {
 		size_t sz = X86_PMC_IDX_MAX * sizeof(struct event_constraint);
 
-		cpuc->constraint_list = kzalloc_node(sz, GFP_KERNEL, cpu_to_node(cpu));
+		cpuc->constraint_list = kzalloc(sz, GFP_KERNEL);
 		if (!cpuc->constraint_list)
 			goto err_shared_regs;
 
@@ -3174,11 +3175,6 @@ err_shared_regs:
 
 err:
 	return -ENOMEM;
-}
-
-static int intel_pmu_cpu_prepare(int cpu)
-{
-	return intel_cpuc_prepare(&per_cpu(cpu_hw_events, cpu), cpu);
 }
 
 static void intel_pmu_cpu_starting(int cpu)
@@ -3236,8 +3232,9 @@ static void intel_pmu_cpu_starting(int cpu)
 	}
 }
 
-static void free_excl_cntrs(struct cpu_hw_events *cpuc)
+static void free_excl_cntrs(int cpu)
 {
+	struct cpu_hw_events *cpuc = &per_cpu(cpu_hw_events, cpu);
 	struct intel_excl_cntrs *c;
 
 	c = cpuc->excl_cntrs;
@@ -3255,8 +3252,9 @@ static void intel_pmu_cpu_dying(int cpu)
 	fini_debug_store_on_cpu(cpu);
 }
 
-void intel_cpuc_finish(struct cpu_hw_events *cpuc)
+static void intel_pmu_cpu_dead(int cpu)
 {
+	struct cpu_hw_events *cpuc = &per_cpu(cpu_hw_events, cpu);
 	struct intel_shared_regs *pc;
 
 	pc = cpuc->shared_regs;
@@ -3266,12 +3264,7 @@ void intel_cpuc_finish(struct cpu_hw_events *cpuc)
 		cpuc->shared_regs = NULL;
 	}
 
-	free_excl_cntrs(cpuc);
-}
-
-static void intel_pmu_cpu_dead(int cpu)
-{
-	intel_cpuc_finish(&per_cpu(cpu_hw_events, cpu));
+	free_excl_cntrs(cpu);
 }
 
 static void intel_pmu_sched_task(struct perf_event_context *ctx,
@@ -4156,7 +4149,7 @@ static __init int fixup_ht_bug(void)
 	get_online_cpus();
 
 	for_each_online_cpu(c) {
-		free_excl_cntrs(&per_cpu(cpu_hw_events, c));
+		free_excl_cntrs(c);
 	}
 
 	put_online_cpus();

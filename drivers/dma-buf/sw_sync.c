@@ -171,9 +171,7 @@ static bool timeline_fence_enable_signaling(struct fence *fence)
 
 static void timeline_fence_disable_signaling(struct fence *fence)
 {
-	struct sync_pt *pt = container_of(fence, struct sync_pt, base);
-
-	list_del_init(&pt->link);
+	return;
 }
 
 static void timeline_fence_value_str(struct fence *fence,
@@ -224,7 +222,6 @@ static void sync_timeline_signal(struct sync_timeline *obj, unsigned int inc)
 		if (!timeline_fence_signaled(&pt->base))
 			break;
 
-		list_del_init(&pt->link);
 		rb_erase(&pt->node, &obj->pt_tree);
 
 		/*
@@ -236,6 +233,7 @@ static void sync_timeline_signal(struct sync_timeline *obj, unsigned int inc)
 		 * timeline_fence_release().
 		 */
 		fence_signal_locked(&pt->base);
+		list_del_init(&pt->link);
 	}
 
 	spin_unlock_irq(&obj->lock);

@@ -96,6 +96,7 @@ void device_pm_sleep_init(struct device *dev)
 	dev->power.is_suspended = false;
 	dev->power.is_noirq_suspended = false;
 	dev->power.is_late_suspended = false;
+	dev->power.is_runtime_disabled = false;
 	init_completion(&dev->power.completion);
 	complete_all(&dev->power.completion);
 	dev->power.wakeup = NULL;
@@ -747,7 +748,10 @@ static int device_resume(struct device *dev, pm_message_t state, bool async)
 
 	if (dev->power.direct_complete) {
 		/* Match the pm_runtime_disable() in __device_suspend(). */
-		pm_runtime_enable(dev);
+		if (dev->power.is_runtime_disabled == true) {
+			pm_runtime_enable(dev);
+			dev->power.is_runtime_disabled = false;
+		}
 		goto Complete;
 	}
 
@@ -1399,10 +1403,12 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
 	if (dev->power.direct_complete) {
 		if (pm_runtime_status_suspended(dev)) {
 			pm_runtime_disable(dev);
+			dev->power.is_runtime_disabled = true;
 			if (pm_runtime_status_suspended(dev))
 				goto Complete;
 
 			pm_runtime_enable(dev);
+			dev->power.is_runtime_disabled = false;
 		}
 		dev->power.direct_complete = false;
 	}

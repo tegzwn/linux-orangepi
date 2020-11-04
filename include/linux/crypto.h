@@ -7,10 +7,10 @@
  *
  * Portions derived from Cryptoapi, by Alexander Kjeldaas <astor@fast.no>
  * and Nettle, by Niels Möller.
- * 
+ *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
- * Software Foundation; either version 2 of the License, or (at your option) 
+ * Software Foundation; either version 2 of the License, or (at your option)
  * any later version.
  *
  */
@@ -199,6 +199,11 @@ struct cipher_desc {
 	unsigned int (*prfn)(const struct cipher_desc *desc, u8 *dst,
 			     const u8 *src, unsigned int nbytes);
 	void *info;
+};
+
+struct hash_desc {
+	struct crypto_hash *tfm;
+	u32 flags;
 };
 
 /**
@@ -474,7 +479,6 @@ struct crypto_alg {
 	int (*cra_init)(struct crypto_tfm *tfm);
 	void (*cra_exit)(struct crypto_tfm *tfm);
 	void (*cra_destroy)(struct crypto_alg *alg);
-	
 	struct module *cra_module;
 } CRYPTO_MINALIGN_ATTR;
 
@@ -565,6 +569,18 @@ struct cipher_tfm {
 	void (*cit_decrypt_one)(struct crypto_tfm *tfm, u8 *dst, const u8 *src);
 };
 
+struct hash_tfm {
+	int (*init)(struct hash_desc *desc);
+	int (*update)(struct hash_desc *desc,
+		      struct scatterlist *sg, unsigned int nsg);
+	int (*final)(struct hash_desc *desc, u8 *out);
+	int (*digest)(struct hash_desc *desc, struct scatterlist *sg,
+		      unsigned int nsg, u8 *out);
+	int (*setkey)(struct crypto_hash *tfm, const u8 *key,
+		      unsigned int keylen);
+	unsigned int digestsize;
+};
+
 struct compress_tfm {
 	int (*cot_compress)(struct crypto_tfm *tfm,
 	                    const u8 *src, unsigned int slen,
@@ -577,21 +593,21 @@ struct compress_tfm {
 #define crt_ablkcipher	crt_u.ablkcipher
 #define crt_blkcipher	crt_u.blkcipher
 #define crt_cipher	crt_u.cipher
+#define crt_hash	crt_u.hash
 #define crt_compress	crt_u.compress
 
 struct crypto_tfm {
 
 	u32 crt_flags;
-	
 	union {
 		struct ablkcipher_tfm ablkcipher;
 		struct blkcipher_tfm blkcipher;
 		struct cipher_tfm cipher;
+		struct hash_tfm hash;
 		struct compress_tfm compress;
 	} crt_u;
 
 	void (*exit)(struct crypto_tfm *tfm);
-	
 	struct crypto_alg *__crt_alg;
 
 	void *__crt_ctx[] CRYPTO_MINALIGN_ATTR;
@@ -610,6 +626,10 @@ struct crypto_cipher {
 };
 
 struct crypto_comp {
+	struct crypto_tfm base;
+};
+
+struct crypto_hash {
 	struct crypto_tfm base;
 };
 
@@ -639,10 +659,10 @@ struct crypto_attr_u32 {
 	u32 num;
 };
 
-/* 
+/*
  * Transform user interface.
  */
- 
+
 struct crypto_tfm *crypto_alloc_base(const char *alg_name, u32 type, u32 mask);
 void crypto_destroy_tfm(void *mem, struct crypto_tfm *tfm);
 
@@ -1587,6 +1607,83 @@ static inline void crypto_cipher_decrypt_one(struct crypto_cipher *tfm,
 						dst, src);
 }
 
+/**
+ * DOC: Synchronous Message Digest API
+ *
+ * The synchronous message digest API is used with the ciphers of type
+ * CRYPTO_ALG_TYPE_HASH (listed as type "hash" in /proc/crypto)
+ */
+
+static inline struct crypto_hash *__crypto_hash_cast(struct crypto_tfm *tfm)
+{
+	return (struct crypto_hash *)tfm;
+}
+
+/**
+ * crypto_alloc_hash() - allocate synchronous message digest handle
+ * @alg_name: is the cra_name / name or cra_driver_name / driver name of the
+ *	      message digest cipher
+ * @type: specifies the type of the cipher
+ * @mask: specifies the mask for the cipher
+ *
+ * Allocate a cipher handle for a message digest. The returned struct
+ * crypto_hash is the cipher handle that is required for any subsequent
+ * API invocation for that message digest.
+ *
+ * Return: allocated cipher handle in case of success; IS_ERR() is true in case
+ * of an error, PTR_ERR() returns the error code.
+ */
+static inline struct crypto_hash *crypto_alloc_hash(const char *alg_name,
+						    u32 type, u32 mask)
+{
+	type &= ~CRYPTO_ALG_TYPE_MASK;
+	mask &= ~CRYPTO_ALG_TYPE_MASK;
+	type |= CRYPTO_ALG_TYPE_HASH;
+	mask |= CRYPTO_ALG_TYPE_HASH_MASK;
+
+	return __crypto_hash_cast(crypto_alloc_base(alg_name, type, mask));
+}
+
+static inline struct crypto_tfm *crypto_hash_tfm(struct crypto_hash *tfm)
+{
+	return &tfm->base;
+}
+
+/**
+ * crypto_free_hash() - zeroize and free message digest handle
+ * @tfm: cipher handle to be freed
+ */
+static inline void crypto_free_hash(struct crypto_hash *tfm)
+{
+	crypto_free_tfm(crypto_hash_tfm(tfm));
+}
+
+static inline struct hash_tfm *crypto_hash_crt(struct crypto_hash *tfm)
+{
+	return &crypto_hash_tfm(tfm)->crt_hash;
+}
+
+/**
+ * crypto_hash_digest() - calculate message digest for a buffer
+ * @desc: see crypto_hash_final()
+ * @sg: see crypto_hash_update()
+ * @nbytes:  see crypto_hash_update()
+ * @out: see crypto_hash_final()
+ *
+ * This function is a "short-hand" for the function calls of crypto_hash_init,
+ * crypto_hash_update and crypto_hash_final. The parameters have the same
+ * meaning as discussed for those separate three functions.
+ *
+ * Return: 0 if the message digest creation was successful; < 0 if an error
+ *	   occurred
+ */
+static inline int crypto_hash_digest(struct hash_desc *desc,
+				     struct scatterlist *sg,
+				     unsigned int nbytes, u8 *out)
+{
+	return crypto_hash_crt(desc->tfm)->digest(desc, sg, nbytes, out);
+}
+
 static inline struct crypto_comp *__crypto_comp_cast(struct crypto_tfm *tfm)
 {
 	return (struct crypto_comp *)tfm;
@@ -1654,5 +1751,21 @@ static inline int crypto_comp_decompress(struct crypto_comp *tfm,
 						    src, slen, dst, dlen);
 }
 
+static inline int crypto_hash_init(struct hash_desc *desc)
+{
+	return crypto_hash_crt(desc->tfm)->init(desc);
+}
+
+static inline int crypto_hash_update(struct hash_desc *desc,
+				     struct scatterlist *sg,
+				     unsigned int nbytes)
+{
+	return crypto_hash_crt(desc->tfm)->update(desc, sg, nbytes);
+}
+
+static inline int crypto_hash_final(struct hash_desc *desc, u8 *out)
+{
+	return crypto_hash_crt(desc->tfm)->final(desc, out);
+}
 #endif	/* _LINUX_CRYPTO_H */
 

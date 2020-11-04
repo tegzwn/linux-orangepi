@@ -2042,13 +2042,13 @@ static void dualshock4_send_output_report(struct sony_sc *sc)
 	if (sc->quirks & (DUALSHOCK4_CONTROLLER_USB | DUALSHOCK4_DONGLE)) {
 		memset(buf, 0, DS4_OUTPUT_REPORT_0x05_SIZE);
 		buf[0] = 0x05;
-		buf[1] = 0x07; /* blink + LEDs + motor */
+		buf[1] = 0xFF;
 		offset = 4;
 	} else {
 		memset(buf, 0, DS4_OUTPUT_REPORT_0x11_SIZE);
 		buf[0] = 0x11;
 		buf[1] = 0xC0 /* HID + CRC */ | sc->ds4_bt_poll_interval;
-		buf[3] = 0x07; /* blink + LEDs + motor */
+		buf[3] = 0x0F;
 		offset = 6;
 	}
 
@@ -2669,6 +2669,9 @@ static int sony_input_configured(struct hid_device *hdev,
 		ret = 0;
 	}
 
+	if (ret < 0)
+		goto err_stop;
+
 	if (sc->quirks & SONY_LED_SUPPORT) {
 		ret = sony_leds_init(sc);
 		if (ret < 0)
@@ -2710,8 +2713,6 @@ err_stop:
 		sony_battery_remove(sc);
 	if (sc->touchpad)
 		sony_unregister_touchpad(sc);
-	if (sc->sensor_dev)
-		sony_unregister_sensors(sc);
 	sony_cancel_work_sync(sc);
 	kfree(sc->output_report_dmabuf);
 	sony_remove_dev_list(sc);
@@ -2798,6 +2799,9 @@ static void sony_remove(struct hid_device *hdev)
 
 	if (sc->touchpad)
 		sony_unregister_touchpad(sc);
+
+	if (sc->sensor_dev)
+		sony_unregister_sensors(sc);
 
 	if (sc->sensor_dev)
 		sony_unregister_sensors(sc);

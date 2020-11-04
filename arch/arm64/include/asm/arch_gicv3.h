@@ -82,7 +82,6 @@
 
 #define read_gicreg			read_sysreg_s
 #define write_gicreg			write_sysreg_s
-
 /*
  * Low-level accessors
  *

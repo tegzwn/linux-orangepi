@@ -76,7 +76,11 @@ config RTC_DEBUG
 	help
 	  Say yes here to enable debugging support in the RTC framework
 	  and individual RTC drivers.
-
+config RTC_SHUTDOWN_ALARM
+	bool "RTC shutdown alarm support"
+	help
+	  Say yes here to enable shutdown alarm support in the RTC framework
+	  and individual RTC drivers.
 comment "RTC interfaces"
 
 config RTC_INTF_SYSFS
@@ -1432,20 +1436,31 @@ config RTC_DRV_SUN4V
 	  If you say Y here you will get support for the Hypervisor
 	  based RTC on SUN4V systems.
 
-config RTC_DRV_SUN6I
-	bool "Allwinner A31 RTC"
-	default MACH_SUN6I || MACH_SUN8I || COMPILE_TEST
+config RTC_DRV_SUNXI
+	tristate "Allwinner sunxi RTC"
 	depends on ARCH_SUNXI
 	help
-	  If you say Y here you will get support for the RTC found in
-	  some Allwinner SoCs like the A31 or the A64.
-
-config RTC_DRV_SUNXI
-	tristate "Allwinner sun4i/sun7i RTC"
-	depends on MACH_SUN4I || MACH_SUN7I || COMPILE_TEST
-	help
 	  If you say Y here you will get support for the RTC found on
-	  Allwinner A10/A20.
+	  Allwinner sun8i/sun50i.
+
+config SUNXI_FAKE_POWEROFF
+       bool "support ir fake poweroff"
+       depends on RTC_DRV_SUNXI
+       default n
+       help
+         support ir bootup feature.
+         but must has the module known as "ar100" or "cpus".
+         the feature is support power up with ir when poweroff.
+
+config SUNXI_BOOTUP_EXTEND
+        depends on RTC_DRV_SUNXI
+        bool "Sunxi rtc reboot Feature"
+        help
+          Support sunxi rtc reboot, which can save state in rtc reg
+          according to the reboot arg.
+          This feature need support of reboot program in the userspace,
+          such as android reboot. Busybox reboot doesn't support this
+          feature.
 
 config RTC_DRV_STARFIRE
 	bool "Starfire RTC"

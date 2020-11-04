@@ -20,6 +20,7 @@
 
 #include "ion.h"
 #include "compat_ion.h"
+#include <asm/cacheflush.h>
 
 /* See drivers/staging/android/uapi/ion.h for the definition of these structs */
 struct compat_ion_allocation_data {
@@ -183,6 +184,46 @@ long compat_ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		return filp->f_op->unlocked_ioctl(filp, ION_IOC_CUSTOM,
 							(unsigned long)data);
 	}
+	case COMPAT_ION_IOC_SUNXI_FLUSH_RANGE:
+	{
+		compat_sunxi_cache_range data;
+		unsigned long start, end, size;
+		struct vm_area_struct *vma = NULL;
+
+		if (copy_from_user(&data, (void __user *)arg,
+				sizeof(compat_sunxi_cache_range)))
+			return -EFAULT;
+
+		start = (unsigned long)(unsigned int)data.start;
+		end = (unsigned long)(unsigned int)data.end;
+		size = end - start;
+
+		if (IS_ERR((void *)start) || IS_ERR((void *)end)) {
+			pr_err("flush 0x%lx, size 0x%lx fault user virt address!\n",
+			       start, end);
+			return -EFAULT;
+		}
+
+		pr_debug("compat flush range start:%lx end:%lx size:%lx\n",
+			 start, end, (end - start));
+
+		vma = find_vma(current->mm, start);
+		if (!vma || start < vma->vm_start || end > vma->vm_end) {
+			pr_err("comm:%s,compat flush range start:%lx end:%lx \
+			size:%lx\n", current->comm, start, end, (end - start));
+			return -EFAULT;
+		}
+
+#ifdef CONFIG_ARM64
+		__dma_flush_range((void *)start, size);
+#else
+		dmac_flush_range((void *)start, (void *)end);
+#endif
+
+		if (copy_to_user((void __user *)arg, &data, sizeof(data)))
+			return -EFAULT;
+		break;
+	}
 	case ION_IOC_SHARE:
 	case ION_IOC_MAP:
 	case ION_IOC_IMPORT:
@@ -192,4 +233,6 @@ long compat_ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	default:
 		return -ENOIOCTLCMD;
 	}
+
+	return 0;
 }

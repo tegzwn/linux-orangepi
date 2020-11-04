@@ -1873,14 +1873,38 @@ static int fallbacks[MIGRATE_TYPES][4] = {
 };
 
 #ifdef CONFIG_CMA
-static struct page *__rmqueue_cma_fallback(struct zone *zone,
-					unsigned int order)
+static struct page *__rmqueue_cma_prev(struct zone *zone,
+		unsigned int order, int migratetype)
 {
-	return __rmqueue_smallest(zone, order, MIGRATE_CMA);
+	int target_migratetype = migratetype;
+	long free_cma = zone_page_state(zone, NR_FREE_CMA_PAGES);
+	struct page *page = NULL;
+
+	if (free_cma) {
+		long free_pages = zone_page_state(zone, NR_FREE_PAGES);
+		long high_mark = high_wmark_pages(zone)*3/2;
+		long low_mark = low_wmark_pages(zone)/2;
+
+		/* if free_cma is below low_mark,do not allcate memory from MIGRATE_CMA,
+		 * because the race between alloc_contig_range() and MIGRATE_MOVABLE page
+		 * allocation will cause the test_pages_isolated() -BUSY fail!
+		 */
+		if ((free_pages - free_cma < high_mark) &&
+				(free_cma > low_mark))
+			target_migratetype = MIGRATE_CMA;
+	}
+
+	page = __rmqueue_smallest(zone, order, target_migratetype);
+	if (unlikely(!page && target_migratetype == MIGRATE_CMA)) {
+		page = __rmqueue_smallest(zone, order, migratetype);
+		target_migratetype = migratetype;
+	}
+
+	return page;
 }
 #else
-static inline struct page *__rmqueue_cma_fallback(struct zone *zone,
-					unsigned int order) { return NULL; }
+static inline struct page *__rmqueue_cma_prev(struct zone *zone,
+		unsigned int order) { return NULL; }
 #endif
 
 /*
@@ -2226,14 +2250,13 @@ static struct page *__rmqueue(struct zone *zone, unsigned int order,
 {
 	struct page *page;
 
-	page = __rmqueue_smallest(zone, order, migratetype);
-	if (unlikely(!page)) {
-		if (migratetype == MIGRATE_MOVABLE)
-			page = __rmqueue_cma_fallback(zone, order);
+	if (migratetype == MIGRATE_MOVABLE)
+		page = __rmqueue_cma_prev(zone, order, migratetype);
+	else
+		page = __rmqueue_smallest(zone, order, migratetype);
 
-		if (!page)
-			page = __rmqueue_fallback(zone, order, migratetype);
-	}
+	if (unlikely(!page))
+		page = __rmqueue_fallback(zone, order, migratetype);
 
 	trace_mm_page_alloc_zone_locked(page, order, migratetype);
 	return page;

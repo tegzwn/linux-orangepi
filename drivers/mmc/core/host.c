@@ -226,6 +226,8 @@ int mmc_of_parse(struct mmc_host *host)
 	/* Parse Card Detection */
 	if (device_property_read_bool(dev, "non-removable")) {
 		host->caps |= MMC_CAP_NONREMOVABLE;
+	} else if (device_property_read_bool(dev, "data3-detect")) {
+		host->sunxi_caps3 |= MMC_SUNXI_CAP3_DAT3_DET;
 	} else {
 		cd_cap_invert = device_property_read_bool(dev, "cd-inverted");
 

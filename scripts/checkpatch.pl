@@ -2340,6 +2340,10 @@ sub process {
 			}
 			$found_file = 1;
 		}
+# donot check markdown
+		if ($realfile =~ /\.md$/) {
+		    next;
+		}
 
 #make up the handle for any error we report on this line
 		if ($showfile) {
@@ -5621,32 +5625,6 @@ sub process {
 			}
 		}
 
-		# check for vsprintf extension %p<foo> misuses
-		if ($^V && $^V ge 5.10.0 &&
-		    defined $stat &&
-		    $stat =~ /^\+(?![^\{]*\{\s*).*\b(\w+)\s*\(.*$String\s*,/s &&
-		    $1 !~ /^_*volatile_*$/) {
-			my $bad_extension = "";
-			my $lc = $stat =~ tr@\n@@;
-			$lc = $lc + $linenr;
-		        for (my $count = $linenr; $count <= $lc; $count++) {
-				my $fmt = get_quoted_string($lines[$count - 1], raw_line($count, 0));
-				$fmt =~ s/%%//g;
-				if ($fmt =~ /(\%[\*\d\.]*p(?![\WFfSsBKRraEhMmIiUDdgVCbGNOx]).)/) {
-					$bad_extension = $1;
-					last;
-				}
-			}
-			if ($bad_extension ne "") {
-				my $stat_real = raw_line($linenr, 0);
-				for (my $count = $linenr + 1; $count <= $lc; $count++) {
-					$stat_real = $stat_real . "\n" . raw_line($count, 0);
-				}
-				WARN("VSPRINTF_POINTER_EXTENSION",
-				     "Invalid vsprintf pointer extension '$bad_extension'\n" . "$here\n$stat_real\n");
-			}
-		}
-
 # Check for misused memsets
 		if ($^V && $^V ge 5.10.0 &&
 		    defined $stat &&
@@ -6223,10 +6201,10 @@ sub process {
 		exit(0);
 	}
 
-	if (!$is_patch && $file !~ /cover-letter\.patch$/) {
-		ERROR("NOT_UNIFIED_DIFF",
-		      "Does not appear to be a unified-diff format patch\n");
-	}
+	#if (!$is_patch && $file !~ /cover-letter\.patch$/) {
+	#	ERROR("NOT_UNIFIED_DIFF",
+	#	      "Does not appear to be a unified-diff format patch\n");
+	#}
 	if ($is_patch && $has_commit_log && $chk_signoff && $signoff == 0) {
 		ERROR("MISSING_SIGN_OFF",
 		      "Missing Signed-off-by: line(s)\n");

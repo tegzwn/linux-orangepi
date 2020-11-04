@@ -830,6 +830,7 @@ retry:
 		struct page **pages = NULL, **data_pages;
 		mempool_t *pool = NULL;	/* Becomes non-null if mempool used */
 		struct page *page;
+		int want;
 		u64 offset = 0, len = 0;
 
 		max_pages = max_pages_ever;
@@ -853,6 +854,12 @@ get_more_pages:
 			if (unlikely(!PageDirty(page)) ||
 			    unlikely(page->mapping != mapping)) {
 				dout("!dirty or !mapping %p\n", page);
+				unlock_page(page);
+				break;
+			}
+			if (!wbc->range_cyclic && page->index > end) {
+				dout("end of range %p\n", page);
+				done = 1;
 				unlock_page(page);
 				break;
 			}

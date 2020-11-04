@@ -355,17 +355,25 @@ static int uvc_v4l2_set_format(struct uvc_streaming *stream,
 	mutex_lock(&stream->mutex);
 
 	if (uvc_queue_allocated(&stream->queue)) {
-		ret = -EBUSY;
-		goto done;
+		/*
+		* There we do not care the queue that had been allocated
+		* by anyone.We just do nothing.
+		* ret = -EBUSY;
+		* goto done;
+		*/
 	}
 
 	stream->ctrl = probe;
 	stream->cur_format = format;
 	stream->cur_frame = frame;
 
-done:
 	mutex_unlock(&stream->mutex);
 	return ret;
+/*
+* done:
+*      mutex_unlock(&stream->mutex);
+*      return ret;
+*/
 }
 
 static int uvc_v4l2_get_streamparm(struct uvc_streaming *stream,

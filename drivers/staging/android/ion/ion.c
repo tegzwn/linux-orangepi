@@ -1103,6 +1103,32 @@ int ion_share_dma_buf_fd_nolock(struct ion_client *client,
 	return __ion_share_dma_buf_fd(client, handle, false);
 }
 
+/**
+ * @name       :ion_share_dma_buf_fd2
+ * @brief      :same with ion_share_dma_buf_fd except always get fd that
+ *		greater then 2
+ * @client:	the client
+ * @handle:	the handle
+ */
+int ion_share_dma_buf_fd2(struct ion_client *client, struct ion_handle *handle)
+{
+	struct dma_buf *dmabuf;
+	int fd;
+
+	dmabuf = ion_share_dma_buf(client, handle);
+	if (IS_ERR(dmabuf))
+		return PTR_ERR(dmabuf);
+
+	fd = get_unused_fd_flags2(O_CLOEXEC);
+	if (fd < 0)
+		dma_buf_put(dmabuf);
+	else
+		fd_install(fd, dmabuf->file);
+
+	return fd;
+}
+EXPORT_SYMBOL(ion_share_dma_buf_fd2);
+
 struct ion_handle *ion_import_dma_buf(struct ion_client *client,
 				      struct dma_buf *dmabuf)
 {
@@ -1179,7 +1205,7 @@ int ion_sync_for_device(struct ion_client *client, int fd)
 	}
 	buffer = dmabuf->priv;
 
-	dma_sync_sg_for_device(NULL, buffer->sg_table->sgl,
+	dma_sync_sg_for_device(get_ion_dev(), buffer->sg_table->sgl,
 			       buffer->sg_table->nents, DMA_BIDIRECTIONAL);
 	dma_buf_put(dmabuf);
 	return 0;
@@ -1414,7 +1440,7 @@ void ion_device_add_heap(struct ion_device *dev, struct ion_heap *heap)
 	 * use negative heap->id to reverse the priority -- when traversing
 	 * the list later attempt higher id numbers first
 	 */
-	plist_node_init(&heap->node, -heap->id);
+	plist_node_init(&heap->node, +heap->id);
 	plist_add(&heap->node, &dev->heaps);
 	debug_file = debugfs_create_file(heap->name, 0664,
 					 dev->heaps_debug_root, heap,
@@ -1509,3 +1535,43 @@ void ion_device_destroy(struct ion_device *dev)
 	kfree(dev);
 }
 EXPORT_SYMBOL(ion_device_destroy);
+
+int ion_phys(struct ion_client *client, struct ion_handle *handle,
+	     ion_phys_addr_t *addr, size_t *len)
+{
+	struct ion_buffer *buffer;
+	int ret;
+
+	mutex_lock(&client->lock);
+	if (!ion_handle_validate(client, handle)) {
+		mutex_unlock(&client->lock);
+		return -EINVAL;
+	}
+
+	buffer = handle->buffer;
+
+	if (!buffer->heap->ops->phys) {
+		pr_err("%s: ion_phys is not implemented by this heap.\n",
+		       __func__);
+		mutex_unlock(&client->lock);
+		return -ENODEV;
+	}
+	mutex_unlock(&client->lock);
+	ret = buffer->heap->ops->phys(buffer->heap, buffer, addr, len);
+	return ret;
+}
+EXPORT_SYMBOL(ion_phys);
+
+int ion_set_dmabuf_flag(struct dma_buf *buf, unsigned long flags)
+{
+	struct ion_buffer *buffer;
+
+	if (!buf)
+		return -1;
+
+	buffer = buf->priv;
+
+	buffer->flags = flags;
+	return 0;
+}
+EXPORT_SYMBOL(ion_set_dmabuf_flag);

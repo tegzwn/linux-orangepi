@@ -787,6 +787,15 @@ config MEMORY_STATE_TIME
 	help
 	  Memory time statistics exported to /sys/kernel/memory_state_time
 
+config SUNXI_SST_STORAGE
+	tristate "secure storage"
+	default n
+	help
+	  Say Y here if you have a vibrator on your board.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called sunxi_storage.
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
@@ -799,4 +808,7 @@ source "drivers/misc/mic/Kconfig"
 source "drivers/misc/genwqe/Kconfig"
 source "drivers/misc/echo/Kconfig"
 source "drivers/misc/cxl/Kconfig"
+source "drivers/misc/sunxi-rf/Kconfig"
+source "drivers/misc/sunxi-addr-mgt/Kconfig"
+source "drivers/misc/sunxi-bootevent/Kconfig"
 endmenu

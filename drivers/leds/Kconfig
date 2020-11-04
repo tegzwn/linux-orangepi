@@ -659,6 +659,14 @@ config LEDS_MLXCPLD
 	  This option enabled support for the LEDs on the Mellanox
 	  boards. Say Y to enabled these.
 
+config LEDS_SUNXI
+	tristate "LED support for Allwinner platforms"
+	depends on ARCH_SUNXI
+	depends on LEDS_CLASS
+	help
+	  This option enabled support for the LEDs on the Allwinner
+	  platforms. Say Y to enabled these.
+
 comment "LED Triggers"
 source "drivers/leds/trigger/Kconfig"
 

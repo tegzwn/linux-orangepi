@@ -744,6 +744,9 @@ static int __f2fs_tmpfile(struct inode *dir, struct dentry *dentry,
 	struct inode *inode;
 	int err;
 
+	if (unlikely(f2fs_cp_error(sbi)))
+		return -EIO;
+
 	err = dquot_initialize(dir);
 	if (err)
 		return err;

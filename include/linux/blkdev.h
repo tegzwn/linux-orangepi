@@ -1051,6 +1051,8 @@ extern void blk_queue_write_cache(struct request_queue *q, bool enabled, bool fu
 extern struct backing_dev_info *blk_get_backing_dev_info(struct block_device *bdev);
 
 extern int blk_rq_map_sg(struct request_queue *, struct request *, struct scatterlist *);
+extern int sunxi_blk_rq_map_sg(struct request_queue *, struct request *,
+		struct scatterlist *);
 extern void blk_dump_rq_flags(struct request *, char *);
 extern long nr_blockdev_pages(void);
 
