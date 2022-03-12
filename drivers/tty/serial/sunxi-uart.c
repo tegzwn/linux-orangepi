@@ -1782,7 +1782,7 @@ EXPORT_SYMBOL(sw_uart_get_pdev);
 
 #ifdef CONFIG_SERIAL_SUNXI_EARLYCON
 
-#define _SUNXI_UART_USR_NF    0x02    /* Tansmit fifo not full */
+#define SUNXI_UART_USR_NF    0x02    /* Tansmit fifo not full */
 
 static void sunxi_serial_console_putchar(struct uart_port *port, int ch)
 {
@@ -1790,7 +1790,7 @@ static void sunxi_serial_console_putchar(struct uart_port *port, int ch)
 
 	do {
 		value = readl_relaxed(port->membase + SUNXI_UART_USR);
-	} while (!(value & SUNXI_UART_USR_NF))
+	} while (!(value & SUNXI_UART_USR_NF));
 
 	writel_relaxed(ch, port->membase + SUNXI_UART_THR);
 }
