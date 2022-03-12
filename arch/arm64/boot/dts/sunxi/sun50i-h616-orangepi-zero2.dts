@@ -5054,29 +5054,29 @@
 		phandle = <0x17a>;
 	};
 
-	chosen {
-		bootargs = "earlyprintk=sunxi-uart,0x05000000 loglevel=8 initcall_debug=1 console=ttyS0 init=/init";
-		linux,initrd-start = <0x0 0x0>;
-		linux,initrd-end = <0x0 0x0>;
-	};
+//	chosen {
+//		bootargs = "earlyprintk=sunxi-uart,0x05000000 loglevel=8 initcall_debug=1 console=ttyS0 init=/init";
+//		linux,initrd-start = <0x0 0x0>;
+//		linux,initrd-end = <0x0 0x0>;
+//	};
 
-	firmware {
-
-		android {
-			compatible = "android,firmware";
-			boot_devices = "soc/sdc0,soc/sdc2,soc";
-
-			vbmeta {
-				compatible = "android,vbmeta";
-				parts = "vbmeta,vbmeta_system,vbmeta_vendor,boot,super,recovery";
-			};
-		};
-
-		optee {
-			compatible = "linaro,optee-tz";
-			method = "smc";
-		};
-	};
+//	firmware {
+//
+//		android {
+//			compatible = "android,firmware";
+//			boot_devices = "soc/sdc0,soc/sdc2,soc";
+//
+//			vbmeta {
+//				compatible = "android,vbmeta";
+//				parts = "vbmeta,vbmeta_system,vbmeta_vendor,boot,super,recovery";
+//			};
+//		};
+//
+//		optee {
+//			compatible = "linaro,optee-tz";
+//			method = "smc";
+//		};
+//	};
 
 	cpus {
 		#address-cells = <0x2>;
@@ -5244,6 +5244,41 @@
 			clock-latency-ns = <0x3b9b0>;
 			opp-supported-hw = <0x1>;
 		};
+		opp@1608000000 {
+			opp-hz = <0x0 0x5fd82200>;
+			opp-microvolt = <0x111700>;
+			clock-latency-ns = <0x3b9b0>;
+			opp-supported-hw = <0x1>;
+		};
+
+		opp@1704000000 {
+			opp-hz = <0x0 0x6590fa00>;
+			opp-microvolt = <0x111700>;
+			clock-latency-ns = <0x3b9b0>;
+			opp-supported-hw = <0x1>;
+		};
+
+		opp@1800000000 {
+			opp-hz = <0x0 0x6b49d200>;
+			opp-microvolt = <0x111700>;
+			clock-latency-ns = <0x3b9b0>;
+			opp-supported-hw = <0x1>;
+		};
+
+		opp@1896000000 {
+			opp-hz = <0x0 1896000000>;
+			opp-microvolt = <0x11b340>;
+			clock-latency-ns = <0x3b9b0>;
+			opp-supported-hw = <0x1>;
+		};
+
+		opp@1992000000 {
+			opp-hz = <0x0 1992000000>;
+			opp-microvolt = <0x11b340>;
+			clock-latency-ns = <0x3b9b0>;
+			opp-supported-hw = <0x1>;
+			status = "disabled";
+
 	};
 
 	psci {
